@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>2028上交凯原法学学硕｜每日打卡</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{background:#f5f7fa;padding:14px;color:#222}
+.header{background:#1f4e96;color:#fff;padding:16px;border-radius:12px;margin-bottom:14px}
+.header h1{font-size:18px;font-weight:600}
+.header p{font-size:13px;opacity:0.9;margin-top:4px}
+
+.tab-wrap{display:flex;gap:6px;margin-bottom:14px}
+.tab{flex:1;text-align:center;background:#fff;padding:10px;border-radius:8px;font-size:14px;border:none}
+.tab.active{background:#1f4e96;color:#fff}
+
+.date-bar{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:12px;border-radius:10px;margin-bottom:14px;box-shadow:0 1px 3px #00000012}
+.date-btn{border:none;background:#e8edf7;color:#1f4e96;width:36px;height:36px;border-radius:8px;font-size:18px}
+.date-text{font-size:15px;font-weight:500}
+
+.stat-card{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.stat-item{background:#fff;text-align:center;padding:12px;border-radius:10px;box-shadow:0 1px 3px #00000012}
+.stat-num{font-size:20px;font-weight:bold;color:#1f4e96}
+.stat-label{font-size:12px;color:#666;margin-top:3px}
+
+.task-card{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 3px #00000012;margin-bottom:10px}
+.task-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f2f2f2;gap:10px}
+.task-row:last-child{border-bottom:none}
+.task-check{width:24px;height:24px;accent-color:#1f4e96}
+.task-info{flex:1}
+.task-name{font-size:15px}
+.task-desc{font-size:12px;color:#777;margin-top:2px}
+.task-time{width:72px}
+.task-time input{width:100%;border:1px solid #ddd;border-radius:6px;padding:6px;font-size:14px;text-align:center}
+
+.remark-box{background:#fff;padding:14px;border-radius:10px;margin-top:14px;box-shadow:0 1px 3px #00000012}
+.remark-box textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:14px;min-height:80px;resize:none}
+
+.btns{display:flex;gap:10px;margin-top:14px}
+.btns button{flex:1;padding:12px;border:none;border-radius:10px;font-size:15px;font-weight:500}
+.btn-save{background:#1f4e96;color:#fff}
+.btn-export{background:#e8edf7;color:#1f4e96}
+.tip{margin-top:12px;font-size:12px;color:#888;text-align:center;line-height:1.5}
+
+/*日历视图*/
+.calendar-wrap{background:#fff;padding:12px;border-radius:10px}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cal-week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px}
+.cal-week div{text-align:center;font-size:12px;color:#666;padding:4px}
+.cal-day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:13px;border:1px solid #eee}
+.cal-day.empty{background:#f8f8f8;border:none}
+.cal-day.hasdata{background:#d4e0f7;color:#1f4e96}
+.cal-day.today{border:2px solid #1f4e96}
+
+.chart-box{background:#fff;padding:14px;border-radius:10px;margin-top:14px}
+
+.page{display:none}
+.page.active{display:block}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>2028上海交大凯原法学学硕 · 每日打卡</h1>
+<p>632法学基础｜858法学综合｜英语一｜政治｜在职备考</p>
+</div>
+
+<div class="tab-wrap">
+<button class="tab active" data-page="pageDaily">📝每日打卡</button>
+<button class="tab" data-page="pageCalendar">📅月历视图</button>
+<button class="tab" data-page="pageChart">📊时长图表</button>
+</div>
+
+<!-- ========== 每日打卡页面 ========== -->
+<div id="pageDaily" class="page active">
+<div class="date-bar">
+<button class="date-btn" id="prevDay">&lt;</button>
+<div class="date-text" id="dateShow"></div>
+<button class="date-btn" id="nextDay">&gt;</button>
+</div>
+
+<div class="stat-card">
+<div class="stat-item">
+<div class="stat-num" id="totalHour">0.0h</div>
+<div class="stat-label">当日总时长</div>
+</div>
+<div class="stat-item">
+<div class="stat-num" id="streak">0</div>
+<div class="stat-label">连续打卡天数</div>
+</div>
+<div class="stat-item">
+<div class="stat-num" id="rate">0%</div>
+<div class="stat-label">任务完成率</div>
+</div>
+</div>
+
+<div class="task-card" id="taskList">
+</div>
+
+<div class="remark-box">
+<div style="font-size:14px;margin-bottom:8px;font-weight:500">📝 当日备注 / 错题 / 薄弱点</div>
+<textarea id="remark"></textarea>
+</div>
+
+<div class="btns">
+<button class="btn-save" id="saveBtn">💾 保存今日打卡</button>
+<button class="btn-export" id="exportBtn">📤 导出全部记录</button>
+</div>
+<div class="tip">⚠️ 数据保存在浏览器本地，清除缓存会丢失；建议定期导出备份<br>浏览器菜单 → 添加到主屏幕，像小程序打开</div>
+</div>
+
+<!-- ========== 月历打卡页面 ========== -->
+<div id="pageCalendar" class="page">
+<div class="calendar-wrap">
+<div class="cal-header">
+<button class="date-btn" id="calPrev">&lt;</button>
+<div class="date-text" id="calShow"></div>
+<button class="date-btn" id="calNext">&gt;</button>
+</div>
+<div class="cal-week">
+<div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+</div>
+<div class="cal-day-grid" id="calGrid"></div>
+</div>
+<div class="tip" style="margin-top:10px">蓝色格子代表当日存在打卡记录；点击日期可跳转至每日打卡页</div>
+</div>
+
+<!-- ========== 时长图表页面 ========== -->
+<div id="pageChart" class="page">
+<div class="chart-box">
+<div style="font-weight:500;margin-bottom:10px">📈本月每日学习时长（小时）</div>
+<canvas id="hourChart"></canvas>
+</div>
+<div class="tip" style="margin-top:10px">图表读取本地打卡数据，切换月份看不同月份统计</div>
+</div>
+
+<script>
+const TASKS = [
+  {id:"morning", name:"晨间背书", desc:"单词/专业课轮换 07:30‑08:30", defaultHour:1},
+  {id:"english", name:"英语学习", desc:"真题/阅读/单词/作文", defaultHour:1},
+  {id:"f632", name:"632法学基础", desc:"法理｜宪法｜行政法", defaultHour:1},
+  {id:"f858", name:"858法学综合", desc:"民法｜刑法，案例训练", defaultHour:1},
+  {id:"politics", name:"政治", desc:"7月后启动，刷题背诵", defaultHour:0},
+  {id:"review", name:"当日复盘", desc:"框架整理、错题回顾", defaultHour:0.5}
+];
+
+let currentDate = new Date();
+let currentCalMonth = new Date();
+let hourChart = null;
+
+// 格式化日期
+function fmtDate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function showDate(d){
+  const weekArr = ["周日","周一","周二","周三","周四","周五","周六"];
+  return `${fmtDate(d)} ${weekArr[d.getDay()]}`;
+}
+function fmtMonth(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+// 本地存储读写
+function getAllData(){
+  const raw = localStorage.getItem("sjtulaw打卡");
+  return raw ? JSON.parse(raw) : {};
+}
+function saveAllData(obj){
+  localStorage.setItem("sjtulaw打卡", JSON.stringify(obj));
+}
+
+// ---------- 每日打卡渲染 ----------
+function renderTasks(){
+  const wrap = document.getElementById("taskList");
+  wrap.innerHTML = "";
+  const data = getAllData();
+  const key = fmtDate(currentDate);
+  const dayData = data[key] || {};
+  TASKS.forEach(t=>{
+    const div = document.createElement("div");
+    div.className = "task-row";
+    const checked = !!dayData[t.id]?.checked;
+    const hour = dayData[t.id]?.hour ?? t.defaultHour;
+    div.innerHTML = `
+      <input class="task-check" type="checkbox" data-id="${t.id}" ${checked?"checked":""}>
+      <div class="task-info">
+        <div class="task-name">${t.name}</div>
+        <div class="task-desc">${t.desc}</div>
+      </div>
+      <div class="task-time">
+        <input type="number" step="0.5" min="0" data-id="${t.id}" value="${hour}">
+      </div>
+    `;
+    wrap.appendChild(div);
+  })
+  document.getElementById("remark").value = dayData.remark || "";
+  calcStat();
+}
+
+function calcStat(){
+  const data = getAllData();
+  const key = fmtDate(currentDate);
+  const dayData = data[key] || {};
+  let totalH = 0;
+  let finishCnt = 0;
+  TASKS.forEach(t=>{
+    const d = dayData[t.id];
+    if(!d) return;
+    totalH += Number(d.hour||0);
+    if(d.checked) finishCnt++;
+  })
+  document.getElementById("totalHour").innerText = totalH.toFixed(1)+"h";
+  document.getElementById("rate").innerText = Math.round(finishCnt / TASKS.length *100)+"%";
+  let streak = 0;
+  let checkDay = new Date();
+  while(true){
+    const ck = fmtDate(checkDay);
+    const ckData = data[ck];
+    if(!ckData) break;
+    const hasFinish = TASKS.some(x=>ckData[x.id]?.checked);
+    if(!hasFinish) break;
+    streak++;
+    checkDay.setDate(checkDay.getDate()-1);
+  }
+  document.getElementById("streak").innerText = streak;
+}
+
+document.getElementById("saveBtn").onclick = ()=>{
+  const data = getAllData();
+  const key = fmtDate(currentDate);
+  const dayObj = {};
+  dayObj.remark = document.getElementById("remark").value;
+  document.querySelectorAll(".task-row").forEach(row=>{
+    const ck = row.querySelector(".task-check");
+    const inp = row.querySelector(".task-time input");
+    const tid = ck.dataset.id;
+    dayObj[tid] = {checked: ck.checked, hour: Number(inp.value)};
+  })
+  data[key] = dayObj;
+  saveAllData(data);
+  alert("✅ 打卡保存成功！");
+  calcStat();
+  renderCalendar();
+  renderChart();
+}
+
+document.getElementById("exportBtn").onclick = ()=>{
+  const data = getAllData();
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "上交法学打卡备份.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("prevDay").onclick = ()=>{currentDate.setDate(currentDate.getDate()-1);refreshDaily()}
+document.getElementById("nextDay").onclick = ()=>{currentDate.setDate(currentDate.getDate()+1);refreshDaily()}
+function refreshDaily(){
+  document.getElementById("dateShow").innerText = showDate(currentDate);
+  renderTasks();
+}
+
+// ---------- 日历视图 ----------
+function renderCalendar(){
+  const data = getAllData();
+  const grid = document.getElementById("calGrid");
+  grid.innerHTML = "";
+  const y = currentCalMonth.getFullYear();
+  const m = currentCalMonth.getMonth();
+  document.getElementById("calShow").innerText = `${y}年${m+1}月`;
+  const first = new Date(y,m,1);
+  const last = new Date(y,m+1,0);
+  const startWeek = first.getDay();
+  for(let i=0;i<startWeek;i++){
+    const d = document.createElement("div");d.className="cal-day empty";grid.appendChild(d);
+  }
+  const todayStr = fmtDate(new Date());
+  for(let d=1;d<=last.getDate();d++){
+    const dayObj = new Date(y,m,d);
+    const ds = fmtDate(dayObj);
+    const cell = document.createElement("div");
+    cell.className = "cal-day";
+    if(ds === todayStr) cell.classList.add("today");
+    if(data[ds]) cell.classList.add("hasdata");
+    cell.innerText = d;
+    cell.onclick = ()=>{
+      currentDate = new Date(dayObj);
+      switchTab('pageDaily');
+      refreshDaily();
+    }
+    grid.appendChild(cell);
+  }
+}
+document.getElementById("calPrev").onclick = ()=>{currentCalMonth.setMonth(currentCalMonth.getMonth()-1);renderCalendar();renderChart()}
+document.getElementById("calNext").onclick = ()=>{currentCalMonth.setMonth(currentCalMonth.getMonth()+1);renderCalendar();renderChart()}
+
+// ---------- Chart时长图表 ----------
+function renderChart(){
+  const data = getAllData();
+  const y = currentCalMonth.getFullYear();
+  const m = currentCalMonth.getMonth();
+  const lastDay = new Date(y,m+1,0).getDate();
+  const labels = [];
+  const hourArr = [];
+  for(let d=1;d<=lastDay;d++){
+    const ds = fmtDate(new Date(y,m,d));
+    labels.push(String(d));
+    const dd = data[ds];
+    let h=0;
+    if(dd){
+      TASKS.forEach(t=>{ if(dd[t.id]) h+=Number(dd[t.id].hour||0); })
+    }
+    hourArr.push(h);
+  }
+  if(hourChart) hourChart.destroy();
+  const ctx = document.getElementById("hourChart").getContext("2d");
+  hourChart = new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:labels,
+      datasets:[{label:"学习时长(h)",data:hourArr,backgroundColor:"#1f4e9680"}]
+    },
+    options:{responsive:true,scales:{y:{min:0}}}
+  })
+}
+
+// ---------- tab切换 ----------
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.onclick = ()=>{
+    const pid = tab.dataset.page;
+    switchTab(pid);
+  }
+})
+function switchTab(pageId){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelector(`[data-page="${pageId}"]`).classList.add("active");
+  document.getElementById(pageId).classList.add("active");
+  if(pageId === 'pageCalendar') renderCalendar();
+  if(pageId === 'pageChart') renderChart();
+}
+
+// 初始化
+refreshDaily();
+renderCalendar();
+renderChart();
+</script>
+</body>
+<!-- （注：内容由AI生成） -->
